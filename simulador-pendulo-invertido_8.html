@@ -1,0 +1,1440 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador de Péndulo Invertido — Estructura IV · UTEQ</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --primary: #4F8B2F;
+    --dark-green: #2D5016;
+    --gold: #C9A961;
+    --gold-deep: #A88845;
+    --bg: #F4F6F2;
+    --card: #FFFFFF;
+    --text: #1A1A1A;
+    --text-muted: #6B7280;
+    --border: #E5E7EB;
+    --danger: #DC2626;
+    --success: #059669;
+    --accent-bg: #FFF9E8;
+    --point-red: #DC2626;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+  header {
+    background: var(--dark-green);
+    color: white;
+    padding: 1.1rem 1.5rem;
+    border-bottom: 4px solid var(--gold);
+  }
+  header .inner { max-width: 1500px; margin: 0 auto; }
+  .eyebrow {
+    font-size: 0.7rem;
+    letter-spacing: 0.18em;
+    color: var(--gold);
+    font-weight: 700;
+    margin-bottom: 0.2rem;
+  }
+  header h1 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: white;
+    font-family: Georgia, serif;
+  }
+  header .subtitle {
+    font-size: 0.82rem;
+    color: #DDE6CD;
+    margin-top: 0.18rem;
+  }
+  .container { max-width: 1500px; margin: 0 auto; padding: 1.1rem; }
+  .grid-main {
+    display: grid;
+    grid-template-columns: 290px 1fr 440px;
+    gap: 0.9rem;
+    margin-bottom: 1rem;
+    height: calc(100vh - 112px);
+    min-height: 430px;
+  }
+  .grid-main > .card {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .grid-main > .card > h2 { flex: 0 0 auto; }
+  .grid-main > .card:first-child { overflow-y: auto; }
+  @media (max-width: 1200px) {
+    .grid-main {
+      grid-template-columns: 1fr;
+      height: auto;
+    }
+    .grid-main > .card { overflow: visible; }
+  }
+  .card {
+    background: var(--card);
+    border-radius: 8px;
+    padding: 1rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    border: 1px solid var(--border);
+  }
+  .card h2 {
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    color: var(--gold-deep);
+    font-weight: 700;
+    margin-bottom: 0.7rem;
+  }
+  .control-group { margin-bottom: 0.75rem; }
+  .control-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 0.85rem;
+    margin-bottom: 0.28rem;
+  }
+  .control-label .name { font-weight: 600; color: var(--dark-green); }
+  .control-label .value {
+    color: var(--primary);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.95rem;
+  }
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--primary);
+    height: 6px;
+  }
+  .range-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    margin-top: 0.1rem;
+  }
+  .control-group.zeta-group {
+    background: var(--accent-bg);
+    padding: 0.6rem 0.65rem;
+    border-radius: 6px;
+    border: 1px solid var(--gold);
+    margin-top: 0.75rem;
+  }
+  .control-group.zeta-group .name { color: var(--dark-green); }
+  .control-group.zeta-group .value { color: var(--gold-deep); }
+  .zeta-info {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-top: 0.4rem;
+    line-height: 1.35;
+  }
+  .zeta-info .src { font-weight: 600; color: var(--dark-green); }
+  .btn-est {
+    margin-top: 0.45rem;
+    padding: 0.32rem 0.6rem;
+    font-size: 0.72rem;
+    background: white;
+    color: var(--dark-green);
+    border: 1px solid var(--gold-deep);
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+    width: 100%;
+  }
+  .btn-est:hover { background: #FFFCEF; }
+  .buttons {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 0.6rem;
+  }
+  button.action {
+    flex: 1;
+    padding: 0.5rem 0.6rem;
+    border: none;
+    border-radius: 6px;
+    background: var(--primary);
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.82rem;
+    transition: background 0.2s;
+  }
+  button.action:hover { background: var(--dark-green); }
+  button.action.secondary { background: var(--gold-deep); }
+  button.action.secondary:hover { background: #8B6F38; }
+  button.outline {
+    background: white;
+    color: var(--dark-green);
+    border: 1.5px solid var(--gold-deep);
+    padding: 0.4rem 0.8rem;
+    font-size: 0.78rem;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  button.outline:hover { background: var(--accent-bg); }
+  .group-selector {
+    margin-top: 0.7rem;
+    padding-top: 0.7rem;
+    border-top: 1px solid var(--border);
+  }
+  select {
+    width: 100%;
+    padding: 0.45rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: white;
+    font-size: 0.78rem;
+    color: var(--text);
+  }
+  .sim-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(to bottom, #FBFCF8 0%, #E8EDDF 100%);
+    border-radius: 6px;
+    padding: 0.5rem;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    position: relative;
+  }
+  .card.sim-card {
+    display: flex;
+    flex-direction: column;
+  }
+  canvas#pendulum {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .chart-container {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .chart-note {
+    flex: 0 0 auto;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 0.4rem;
+    line-height: 1.4;
+  }
+  /* Compact params strip */
+  .params-strip {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.55rem 0.85rem;
+    margin-bottom: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem 1rem;
+    font-size: 0.78rem;
+    align-items: baseline;
+  }
+  .params-strip .label-strip {
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    color: var(--gold-deep);
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-right: 0.4rem;
+  }
+  .params-strip .item {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.28rem;
+  }
+  .params-strip .item .lbl {
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+  .params-strip .item .val {
+    color: var(--dark-green);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .stability-mini {
+    margin-left: auto;
+    padding: 0.2rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+  .stability-mini.stable {
+    background: #ECFDF5;
+    color: var(--success);
+    border: 1px solid #6EE7B7;
+  }
+  .stability-mini.unstable {
+    background: #FEE2E2;
+    color: var(--danger);
+    border: 1px solid #FCA5A5;
+  }
+  /* Table */
+  .table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .table-status {
+    font-size: 0.75rem;
+    color: var(--gold-deep);
+    font-weight: 600;
+    padding: 0.22rem 0.55rem;
+    background: var(--accent-bg);
+    border: 1px solid var(--gold);
+    border-radius: 999px;
+  }
+  .table-status.theoretical {
+    color: var(--text-muted);
+    background: #F4F6F2;
+    border-color: var(--border);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+  thead { background: var(--dark-green); color: white; }
+  thead th {
+    padding: 0.55rem 0.45rem;
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+  }
+  tbody td {
+    padding: 0.42rem 0.4rem;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    font-variant-numeric: tabular-nums;
+  }
+  tbody tr:nth-child(even) { background: #FAFCF6; }
+  tbody tr:hover { background: #F4F6F2; }
+  tbody td.editable {
+    background: var(--accent-bg);
+    padding: 0.18rem 0.22rem;
+  }
+  .amp-input {
+    width: 100%;
+    max-width: 90px;
+    padding: 0.28rem 0.4rem;
+    border: 1px solid var(--gold);
+    border-radius: 4px;
+    background: white;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--dark-green);
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    -moz-appearance: textfield;
+  }
+  .amp-input::-webkit-outer-spin-button,
+  .amp-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .amp-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(79,139,47,0.15);
+  }
+  .amp-input.modified {
+    background: #FEF3C7;
+    border-color: var(--gold-deep);
+  }
+  tfoot { background: #F4F6F2; font-weight: 700; }
+  tfoot td {
+    padding: 0.55rem 0.4rem;
+    text-align: center;
+    color: var(--dark-green);
+  }
+  tfoot td.value-cell { color: var(--primary); font-size: 0.95rem; }
+  .explainer {
+    margin-top: 0.85rem;
+    padding: 0.75rem 0.95rem;
+    background: #F4F6F2;
+    border-left: 3px solid var(--gold);
+    border-radius: 4px;
+    font-size: 0.8rem;
+    color: var(--text);
+    line-height: 1.55;
+  }
+  .explainer .formula {
+    display: inline-block;
+    background: white;
+    padding: 0.18rem 0.45rem;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    font-family: 'Cambria Math', Cambria, serif;
+    margin: 0 0.12rem;
+  }
+  .footer-note {
+    margin-top: 1.3rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    font-size: 0.76rem;
+    color: var(--text-muted);
+  }
+  .constants-box {
+    margin-top: 0.7rem;
+    padding: 0.6rem 0.7rem;
+    background: #F4F6F2;
+    border-left: 3px solid var(--gold);
+    border-radius: 4px;
+    font-size: 0.74rem;
+    color: var(--text);
+    line-height: 1.45;
+  }
+  .constants-box strong { color: var(--dark-green); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="inner">
+    <div class="eyebrow">UTEQ · FACULTAD DE CIENCIAS DE LA INGENIERÍA · CARRERA DE ARQUITECTURA</div>
+    <h1>Simulador de Péndulo Invertido</h1>
+    <div class="subtitle">Estructura IV (ARQUI-605) · PPA 2026-2027 · Ing. José Gonzalo Zambrano Centeno, Mg.</div>
+  </div>
+</header>
+
+<div class="container">
+
+  <div class="grid-main">
+
+    <!-- ============ CONTROLS ============ -->
+    <div class="card">
+      <h2>PARÁMETROS VARIABLES</h2>
+
+      <div class="control-group">
+        <div class="control-label">
+          <span class="name">Altura libre L</span>
+          <span class="value"><span id="L-val">21.0</span> cm</span>
+        </div>
+        <input type="range" id="L" min="15" max="33" step="0.5" value="21">
+        <div class="range-meta"><span>15 cm</span><span>33 cm</span></div>
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">
+          <span class="name">Diámetro Ø del cilindro</span>
+          <span class="value"><span id="D-val">3.5</span> cm</span>
+        </div>
+        <input type="range" id="D" min="2.5" max="6.0" step="0.1" value="3.5">
+        <div class="range-meta"><span>2.5 cm</span><span>6.0 cm</span></div>
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">
+          <span class="name">Desplazamiento inicial x₀</span>
+          <span class="value"><span id="x0-val">3.0</span> cm</span>
+        </div>
+        <input type="range" id="x0" min="0.5" max="5.0" step="0.1" value="3.0">
+        <div class="range-meta"><span>0.5 cm</span><span>5.0 cm</span></div>
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">
+          <span class="name">Tiempo de análisis</span>
+          <span class="value"><span id="tmax-val">15.0</span> s</span>
+        </div>
+        <input type="range" id="tmax" min="3" max="30" step="0.5" value="15">
+        <div class="range-meta"><span>3 s</span><span>30 s</span></div>
+      </div>
+
+      <div class="control-group zeta-group">
+        <div class="control-label">
+          <span class="name">Amortiguamiento ζ</span>
+          <span class="value"><span id="zeta-val">1.31</span> %</span>
+        </div>
+        <input type="range" id="zeta" min="0.1" max="10.0" step="0.05" value="1.31">
+        <div class="range-meta"><span>0.1 %</span><span>10 %</span></div>
+        <button id="btn-zeta-est" class="btn-est">Restablecer al ζ estimado</button>
+        <div class="zeta-info">
+          <span class="src" id="zeta-src">Origen: estimado por geometría</span>
+        </div>
+      </div>
+
+      <div class="buttons">
+        <button class="action" id="btn-start">Iniciar</button>
+        <button class="action secondary" id="btn-pause">Pausar</button>
+        <button class="action" id="btn-reset">Reiniciar</button>
+      </div>
+
+      <div class="group-selector">
+        <div class="control-label">
+          <span class="name" style="font-size: 0.78rem;">Asignación por grupo (PDF)</span>
+        </div>
+        <select id="grupo">
+          <option value="">— Seleccionar grupo —</option>
+        </select>
+      </div>
+
+      <div class="constants-box">
+        <strong>Constantes del modelo:</strong><br>
+        Varilla: electrodo 6011, Ø núcleo = 2,5 mm<br>
+        Altura del cilindro: 5 cm (fija)<br>
+        Densidad del mortero: 2,1 g/cm³
+      </div>
+    </div>
+
+    <!-- ============ SIMULATION ============ -->
+    <div class="card sim-card">
+      <h2>VISUALIZACIÓN DE LA MAQUETA</h2>
+      <div class="sim-container">
+        <canvas id="pendulum"></canvas>
+      </div>
+    </div>
+
+    <!-- ============ CHART (now on the right) ============ -->
+    <div class="card">
+      <h2>RESPUESTA EN EL TIEMPO — DESPLAZAMIENTO x(t)</h2>
+      <div class="chart-container">
+        <canvas id="time-chart"></canvas>
+      </div>
+      <div class="chart-note">
+        Curva verde: respuesta teórica con el ζ vigente. Punto rojo: posición instantánea de la masa durante la animación.
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ COMPACT PARAMS STRIP ============ -->
+  <div class="params-strip">
+    <span class="label-strip">Resultados</span>
+    <span class="item"><span class="lbl">V</span> <span class="val"><span id="V">48.1</span> cm³</span></span>
+    <span class="item"><span class="lbl">m</span> <span class="val"><span id="m">101</span> g</span></span>
+    <span class="item"><span class="lbl">W</span> <span class="val"><span id="W">0.99</span> N</span></span>
+    <span class="item"><span class="lbl">I</span> <span class="val"><span id="I">1.92</span>×10⁻¹² m⁴</span></span>
+    <span class="item"><span class="lbl">k<sub>b</sub></span> <span class="val"><span id="kb">124.6</span> N/m</span></span>
+    <span class="item"><span class="lbl">k<sub>g</sub></span> <span class="val"><span id="kg">4.72</span> N/m</span></span>
+    <span class="item"><span class="lbl">k<sub>eff</sub></span> <span class="val"><span id="keff">119.9</span> N/m</span></span>
+    <span class="item"><span class="lbl">ω</span> <span class="val"><span id="omega">34.4</span> rad/s</span></span>
+    <span class="item"><span class="lbl">f</span> <span class="val"><span id="freq">5.48</span> Hz</span></span>
+    <span class="item"><span class="lbl">T</span> <span class="val"><span id="T">0.183</span> s</span></span>
+    <span class="item"><span class="lbl">ζ<sub>est</sub></span> <span class="val"><span id="zeta-est">1.31</span> %</span></span>
+    <span class="stability-mini stable" id="stability">✓ Estable</span>
+  </div>
+
+  <!-- ============ TABLE ============ -->
+  <div class="card">
+    <div class="table-header">
+      <h2 style="margin-bottom: 0;">TABLA DE REDUCCIÓN DE AMPLITUD POR CICLO</h2>
+      <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <span id="table-status" class="table-status theoretical">Valores teóricos</span>
+        <button id="btn-reset-table" class="outline">Restablecer valores teóricos</button>
+      </div>
+    </div>
+    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+      Cada fila muestra el pico positivo de un ciclo de oscilación (el pico negativo se considera simétrico, de igual magnitud). Las celdas resaltadas son editables: introduzca en cada una la <strong>amplitud medida experimentalmente</strong> con la maqueta física. Con dos o más entradas, el sistema infiere ζ por regresión lineal sobre ln(A) vs t y rellena automáticamente las celdas no editadas con la curva de mejor ajuste.
+    </p>
+    <div style="overflow-x: auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Ciclo n</th>
+            <th>Tiempo t (s)</th>
+            <th>Amplitud A<sub>n</sub> (cm) ✎</th>
+            <th>Reducción ΔA (cm)</th>
+            <th>Reducción (%)</th>
+            <th>Decremento δ</th>
+            <th>ζ calculado (%)</th>
+          </tr>
+        </thead>
+        <tbody id="cycles-tbody"></tbody>
+        <tfoot>
+          <tr>
+            <td colspan="5" style="text-align: right;">Promedio del amortiguamiento estimado a partir de la tabla:</td>
+            <td id="delta-avg" class="value-cell">—</td>
+            <td id="zeta-avg" class="value-cell">—</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div class="explainer">
+      <strong style="color: var(--dark-green);">Método del decremento logarítmico.</strong>
+      Entre dos picos sucesivos A<sub>n-1</sub> y A<sub>n</sub> se calcula
+      <span class="formula">δ = ln(A<sub>n-1</sub> / A<sub>n</sub>)</span>
+      y el coeficiente de amortiguamiento real
+      <span class="formula">ζ = δ / √(4π² + δ²)</span>.
+      Al editar las amplitudes con las mediciones reales tomadas en la maqueta, el ζ inferido se transfiere automáticamente al simulador y la curva teórica se reajusta para reflejar el amortiguamiento experimental.
+    </div>
+  </div>
+
+  <div class="footer-note">
+    Simulador desarrollado como apoyo al trabajo grupal de la asignatura Estructura IV. La maqueta física construida según el instructivo institucional debe validar empíricamente los resultados predichos por este modelo.
+  </div>
+
+</div>
+
+<script>
+// ===================================================================
+// CONSTANTES FÍSICAS
+// ===================================================================
+const E         = 2.0e11;
+const RHO_MORT  = 2100;
+const G         = 9.81;
+const D_WIRE    = 0.0025;
+const H_CYL     = 0.05;
+const T_MAX_DEFAULT = 15.0;   // Tiempo de análisis inicial (s) — luego variable
+
+// ===================================================================
+// TABLA DE ASIGNACIÓN POR GRUPO (PDF)
+// ===================================================================
+const grupos = [
+  { p: "A", g: 1, L: 15, D: 2.5 },
+  { p: "A", g: 2, L: 18, D: 3.0 },
+  { p: "A", g: 3, L: 21, D: 3.5 },
+  { p: "A", g: 4, L: 24, D: 4.0 },
+  { p: "A", g: 5, L: 27, D: 4.5 },
+  { p: "A", g: 6, L: 30, D: 5.0 },
+  { p: "A", g: 7, L: 33, D: 5.5 },
+  { p: "B", g: 1, L: 15, D: 4.0 },
+  { p: "B", g: 2, L: 18, D: 4.5 },
+  { p: "B", g: 3, L: 21, D: 5.0 },
+  { p: "B", g: 4, L: 24, D: 5.5 },
+  { p: "B", g: 5, L: 27, D: 6.0 },
+  { p: "B", g: 6, L: 30, D: 2.5 },
+  { p: "C", g: 1, L: 15, D: 5.5 },
+  { p: "C", g: 2, L: 18, D: 6.0 },
+  { p: "C", g: 3, L: 21, D: 2.5 },
+  { p: "C", g: 4, L: 24, D: 3.0 },
+  { p: "C", g: 5, L: 27, D: 3.5 },
+  { p: "C", g: 6, L: 30, D: 4.0 },
+  { p: "C", g: 7, L: 33, D: 4.5 },
+  { p: "C", g: 8, L: 33, D: 3.0 },
+];
+
+const sel = document.getElementById("grupo");
+grupos.forEach((g, idx) => {
+  const opt = document.createElement("option");
+  opt.value = idx;
+  opt.textContent = `Paralelo ${g.p} — Grupo ${g.g}: L=${g.L} cm, Ø=${g.D} cm`;
+  sel.appendChild(opt);
+});
+
+// ===================================================================
+// FÍSICA DEL SISTEMA
+// ===================================================================
+function computeParams(L_cm, D_cm) {
+  const L = L_cm / 100;
+  const D = D_cm / 100;
+  const V = Math.PI * Math.pow(D/2, 2) * H_CYL;
+  const m = V * RHO_MORT;
+  const W = m * G;
+  const I = Math.PI * Math.pow(D_WIRE, 4) / 64;
+  const k_b = 3 * E * I / Math.pow(L, 3);
+  const k_g = m * G / L;
+  const k_eff = k_b - k_g;
+  const stable = k_eff > 0;
+  const omega = stable ? Math.sqrt(k_eff / m) : 0;
+  const f = omega / (2 * Math.PI);
+  const T = stable ? 2 * Math.PI / omega : Infinity;
+  return { L, D, V, m, W, I, k_b, k_g, k_eff, stable, omega, f, T };
+}
+
+function estimateZeta(L_cm, D_cm) {
+  const zMat = 0.010;
+  const zL   = 0.005 * (L_cm - 15) / (33 - 15);
+  const zD   = 0.005 * (D_cm - 2.5) / (6.0 - 2.5);
+  return zMat + zL + zD;
+}
+
+// ===================================================================
+// ESTADO
+// ===================================================================
+const state = {
+  running: false,
+  t: 0,
+  lastFrameTime: 0,
+  params: null,
+  zeta: 0.013,            // amortiguamiento actual del simulador
+  zetaEst: 0.013,          // valor estimado por geometría
+  x0: 0.03,
+  tMax: T_MAX_DEFAULT,
+  history: [],
+  peaks: [],
+  tableAmplitudes: [],
+  theoreticalAmplitudes: [],
+  userEdited: [],          // array de booleanos: true si la celda fue editada manualmente
+  userModified: false,
+  zetaSource: "estimated",  // "estimated" | "table" | "slider"
+};
+
+// ===================================================================
+// FLUJO PRINCIPAL — al cambiar L, Ø o x₀
+// ===================================================================
+function onGeometryChange() {
+  const Lcm = parseFloat(document.getElementById("L").value);
+  const Dcm = parseFloat(document.getElementById("D").value);
+  const x0cm = parseFloat(document.getElementById("x0").value);
+
+  document.getElementById("L-val").textContent  = Lcm.toFixed(1);
+  document.getElementById("D-val").textContent  = Dcm.toFixed(1);
+  document.getElementById("x0-val").textContent = x0cm.toFixed(1);
+
+  state.params = computeParams(Lcm, Dcm);
+  state.x0 = x0cm / 100;
+
+  // Estimar ζ y aplicarlo automáticamente
+  state.zetaEst = estimateZeta(Lcm, Dcm);
+  state.zeta = state.zetaEst;
+  state.zetaSource = "estimated";
+  syncZetaSlider();
+
+  refreshAfterParamChange(/*resetTable=*/true);
+}
+
+function refreshAfterParamChange(resetTable) {
+  const p = state.params;
+  document.getElementById("V").textContent     = (p.V * 1e6).toFixed(1);
+  document.getElementById("m").textContent     = (p.m * 1000).toFixed(0);
+  document.getElementById("W").textContent     = p.W.toFixed(2);
+  document.getElementById("I").textContent     = (p.I * 1e12).toFixed(2);
+  document.getElementById("kb").textContent    = p.k_b.toFixed(1);
+  document.getElementById("kg").textContent    = p.k_g.toFixed(2);
+  document.getElementById("keff").textContent  = p.k_eff.toFixed(1);
+  document.getElementById("omega").textContent = p.omega.toFixed(2);
+  document.getElementById("freq").textContent  = p.f.toFixed(2);
+  document.getElementById("T").textContent     = p.stable ? p.T.toFixed(3) : "—";
+  document.getElementById("zeta-est").textContent = (state.zetaEst * 100).toFixed(2);
+
+  const stab = document.getElementById("stability");
+  if (p.stable) {
+    stab.className = "stability-mini stable";
+    stab.textContent = "✓ Estable";
+  } else {
+    stab.className = "stability-mini unstable";
+    stab.textContent = "✗ Inestable (pandeo)";
+  }
+
+  state.t = 0;
+  generateAnalyticalResponse();
+  if (resetTable) {
+    resetTableToTheoretical();
+  } else {
+    renderTable();
+  }
+  updateChart();
+  drawPendulum(state.x0 * 100);
+  updateZetaSourceLabel();
+}
+
+function syncZetaSlider() {
+  const slider = document.getElementById("zeta");
+  const v = (state.zeta * 100).toFixed(2);
+  // Limit to slider bounds
+  const clamped = Math.max(0.1, Math.min(10.0, parseFloat(v)));
+  slider.value = clamped;
+  document.getElementById("zeta-val").textContent = clamped.toFixed(2);
+}
+
+function updateZetaSourceLabel() {
+  const el = document.getElementById("zeta-src");
+  if (state.zetaSource === "estimated") {
+    el.textContent = "Origen: estimado por geometría";
+    el.style.color = "var(--dark-green)";
+  } else if (state.zetaSource === "table") {
+    el.textContent = "Origen: derivado de la tabla experimental";
+    el.style.color = "var(--gold-deep)";
+  } else {
+    el.textContent = "Origen: ajustado manualmente con el slider";
+    el.style.color = "var(--primary)";
+  }
+}
+
+function generateAnalyticalResponse() {
+  state.history = [];
+  state.peaks = [];
+  state.theoreticalAmplitudes = [];
+  if (!state.params.stable) return;
+
+  const wn = state.params.omega;
+  const z  = state.zeta;
+  const wd = wn * Math.sqrt(1 - z * z);
+  const Td = 2 * Math.PI / wd;
+  const duration = state.tMax;
+  const dt = Math.max(0.001, Td / 80);
+
+  for (let t = 0; t <= duration; t += dt) {
+    const x = state.x0 * Math.exp(-z * wn * t) * Math.cos(wd * t);
+    state.history.push({ t, x });
+  }
+  // Peaks: máx 15 ciclos dentro de duration, filtrados por magnitud significativa
+  const ampMin = Math.max(0.0001, state.x0 * 0.005);
+  for (let n = 0; n <= 30; n++) {
+    const tn = n * Td;
+    if (tn > duration) break;
+    const xn = state.x0 * Math.exp(-z * wn * tn);
+    if (xn < ampMin && n > 2) break;
+    state.peaks.push({ n, t: tn, x: xn });
+    state.theoreticalAmplitudes.push(xn * 100);
+    if (state.peaks.length >= 15) break;
+  }
+}
+
+// ===================================================================
+// DIBUJO DE LA MAQUETA — adaptable al tamaño del canvas
+// ===================================================================
+const canvas = document.getElementById("pendulum");
+const ctx = canvas.getContext("2d");
+let pxPerCm = 11;          // se recalcula en fitCanvas()
+let lastDrawnX = 0;        // último x dibujado (cm), para redibujar al redimensionar
+
+function fitCanvas() {
+  const cont = canvas.parentElement;
+  const w = Math.max(300, cont.clientWidth - 16);
+  const h = Math.max(300, cont.clientHeight - 12);
+  canvas.width = w;
+  canvas.height = h;
+
+  // pxPerCm para que varilla (≤33 cm) + cilindro (5 cm) = 38 cm quepa con márgenes
+  const usableV = h - 130;
+  pxPerCm = Math.max(5, Math.min(28, usableV / 38));
+
+  if (state.params) drawPendulum(lastDrawnX);
+}
+
+function drawPendulum(currentXcm) {
+  lastDrawnX = currentXcm;
+  const W = canvas.width;
+  const H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const p = state.params;
+  if (!p) return;
+  const rodLenPx = p.L * 100 * pxPerCm;
+  const cylDiamPx = p.D * 100 * pxPerCm;
+  const cylHpx = 5 * pxPerCm;
+
+  // Base escalada (≈ 22 cm de ancho, 1.4 cm de espesor)
+  const baseW = Math.max(180, 22 * pxPerCm);
+  const baseH = Math.max(10, 1.4 * pxPerCm);
+  const marbleR = Math.max(4, 0.55 * pxPerCm);
+  const baseY = H - 6 * pxPerCm;
+  const baseX = W/2 - baseW/2;
+
+  // Canicas
+  ctx.fillStyle = "#9CA3AF";
+  const nMarbles = 4;
+  for (let i = 0; i < nMarbles; i++) {
+    const cx = baseX + (baseW * (i + 1)) / (nMarbles + 1);
+    ctx.beginPath();
+    ctx.arc(cx, baseY + baseH + marbleR + 1, marbleR, 0, 2 * Math.PI);
+    ctx.fill();
+  }
+
+  // Suelo
+  const floorY = baseY + baseH + 2 * marbleR + 6;
+  ctx.strokeStyle = "#6B7280";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(20, floorY);
+  ctx.lineTo(W - 20, floorY);
+  ctx.stroke();
+  ctx.lineWidth = 1;
+  for (let x = 25; x < W - 20; x += 11) {
+    ctx.beginPath();
+    ctx.moveTo(x, floorY);
+    ctx.lineTo(x - 5, floorY + 8);
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = "#8B6F38";
+  ctx.fillRect(baseX, baseY, baseW, baseH);
+  ctx.strokeStyle = "#5C4925";
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(baseX, baseY, baseW, baseH);
+
+  ctx.fillStyle = "#5C4925";
+  ctx.fillRect(W/2 - 10, baseY - 3, 20, 3);
+
+  const tipDispPx = currentXcm * pxPerCm;
+  ctx.beginPath();
+  ctx.moveTo(W/2, baseY);
+  const nSegs = 40;
+  for (let i = 1; i <= nSegs; i++) {
+    const z = i / nSegs;
+    const xOff = tipDispPx * (3*z*z - z*z*z) / 2;
+    ctx.lineTo(W/2 + xOff, baseY - rodLenPx * z);
+  }
+  ctx.strokeStyle = "#374151";
+  ctx.lineWidth = 3.5;
+  ctx.lineCap = "round";
+  ctx.stroke();
+
+  const tipX = W/2 + tipDispPx;
+  const tipY = baseY - rodLenPx;
+  const tipAngle = Math.atan(tipDispPx * 1.5 / rodLenPx);
+
+  ctx.save();
+  ctx.translate(tipX, tipY);
+  ctx.rotate(tipAngle);
+
+  const grad = ctx.createLinearGradient(-cylDiamPx/2, 0, cylDiamPx/2, 0);
+  grad.addColorStop(0, "#6B6157");
+  grad.addColorStop(0.5, "#8E8378");
+  grad.addColorStop(1, "#6B6157");
+  ctx.fillStyle = grad;
+  ctx.fillRect(-cylDiamPx/2, -cylHpx, cylDiamPx, cylHpx);
+
+  ctx.strokeStyle = "#3F3833";
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(-cylDiamPx/2, -cylHpx, cylDiamPx, cylHpx);
+
+  ctx.strokeStyle = "rgba(60,50,40,0.35)";
+  ctx.lineWidth = 0.5;
+  for (let i = 1; i < 5; i++) {
+    const xi = -cylDiamPx/2 + i * cylDiamPx / 5;
+    ctx.beginPath();
+    ctx.moveTo(xi, -cylHpx);
+    ctx.lineTo(xi, 0);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  ctx.fillStyle = "#2D5016";
+  ctx.font = "11px system-ui, sans-serif";
+
+  const dimX = baseX - 22;
+  ctx.strokeStyle = "#2D5016";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(dimX, baseY);
+  ctx.lineTo(dimX, tipY);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(dimX - 4, baseY - 4);
+  ctx.lineTo(dimX, baseY);
+  ctx.lineTo(dimX + 4, baseY - 4);
+  ctx.moveTo(dimX - 4, tipY + 4);
+  ctx.lineTo(dimX, tipY);
+  ctx.lineTo(dimX + 4, tipY + 4);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(dimX - 5, baseY); ctx.lineTo(dimX + 5, baseY);
+  ctx.moveTo(dimX - 5, tipY);  ctx.lineTo(dimX + 5, tipY);
+  ctx.stroke();
+  ctx.save();
+  ctx.translate(dimX - 9, (baseY + tipY) / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = "center";
+  ctx.fillText(`L = ${(p.L * 100).toFixed(1)} cm`, 0, 0);
+  ctx.restore();
+
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#2D5016";
+  ctx.font = "11px system-ui, sans-serif";
+  ctx.fillText(`Ø = ${(p.D * 100).toFixed(1)} cm`, tipX, tipY - cylHpx - 8);
+  ctx.fillText(`m ≈ ${(p.m * 1000).toFixed(0)} g`, tipX, tipY - cylHpx - 22);
+
+  ctx.textAlign = "left";
+  ctx.fillStyle = "#6B7280";
+  ctx.font = "10px system-ui, sans-serif";
+  ctx.fillText("Varilla: electrodo 6011 (Ø 2,5 mm)", 12, 20);
+  ctx.fillText(`ω = ${p.omega.toFixed(2)} rad/s  ·  T = ${p.T.toFixed(3)} s  ·  ζ = ${(state.zeta*100).toFixed(2)} %`, 12, 36);
+  ctx.fillText(`x₀ = ${(state.x0 * 100).toFixed(1)} cm`, 12, 52);
+
+  if (state.running) {
+    ctx.fillStyle = "#4F8B2F";
+    ctx.font = "bold 11px system-ui, sans-serif";
+    ctx.textAlign = "right";
+    ctx.fillText(`t = ${state.t.toFixed(2)} s`, W - 12, 20);
+  }
+}
+
+// ===================================================================
+// GRÁFICO TEMPORAL — con punto dinámico
+// ===================================================================
+let chart;
+function initChart() {
+  const c = document.getElementById("time-chart").getContext("2d");
+  chart = new Chart(c, {
+    type: "line",
+    data: {
+      datasets: [
+        {
+          label: "x(t)",
+          data: [],
+          borderColor: "rgba(79,139,47,0.40)",
+          backgroundColor: "rgba(79,139,47,0.04)",
+          borderWidth: 1.5,
+          pointRadius: 0,
+          tension: 0.1,
+          fill: true,
+        },
+        {
+          label: "Posición actual",
+          data: [],
+          borderColor: "#DC2626",
+          backgroundColor: "#DC2626",
+          pointRadius: 10,
+          pointHoverRadius: 12,
+          pointBorderColor: "white",
+          pointBorderWidth: 3,
+          pointStyle: "circle",
+          showLine: false,
+          order: 0,
+        }
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      scales: {
+        x: {
+          type: "linear",
+          min: 0,
+          max: state.tMax,
+          title: { display: true, text: "Tiempo (s)", color: "#2D5016", font: { weight: "600", size: 11 } },
+          grid: { color: "#E5E7EB" },
+          ticks: { color: "#374151", font: { size: 10 } }
+        },
+        y: {
+          title: { display: true, text: "x (cm)", color: "#2D5016", font: { weight: "600", size: 11 } },
+          grid: { color: "#E5E7EB" },
+          ticks: { color: "#374151", font: { size: 10 } }
+        }
+      },
+      plugins: {
+        legend: {
+          position: "top",
+          labels: { color: "#1F2937", font: { size: 10 }, boxWidth: 12, padding: 6 }
+        },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => `${ctx.dataset.label}: x = ${ctx.parsed.y.toFixed(3)} cm @ t = ${ctx.parsed.x.toFixed(3)} s`
+          }
+        }
+      }
+    }
+  });
+}
+
+function updateChart() {
+  if (!chart) return;
+  chart.options.scales.x.max = state.tMax;
+  chart.data.datasets[0].data = state.history.map(p => ({ x: p.t, y: p.x * 100 }));
+  // El punto actual permanece donde estaba si está corriendo, o se ubica en (0, x0)
+  if (!state.running) {
+    chart.data.datasets[1].data = [{ x: 0, y: state.x0 * 100 }];
+  }
+  chart.update();
+}
+
+let lastChartFrame = 0;
+function updateCurrentPoint(t, x_cm) {
+  if (!chart) return;
+  const now = performance.now();
+  if (now - lastChartFrame < 33) return; // ~30 fps
+  lastChartFrame = now;
+  chart.data.datasets[1].data = [{ x: t, y: x_cm }];
+  chart.update("none");
+}
+
+// ===================================================================
+// TABLA EDITABLE
+// ===================================================================
+function resetTableToTheoretical() {
+  state.tableAmplitudes = [...state.theoreticalAmplitudes];
+  state.userEdited = state.theoreticalAmplitudes.map(() => false);
+  state.userModified = false;
+  renderTable();
+  updateTableStatus();
+}
+
+function renderTable() {
+  const tbody = document.getElementById("cycles-tbody");
+  tbody.innerHTML = "";
+
+  if (!state.params.stable || state.peaks.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:1rem; color:var(--text-muted);">— Sin oscilación —</td></tr>`;
+    document.getElementById("delta-avg").textContent = "—";
+    document.getElementById("zeta-avg").textContent  = "—";
+    return;
+  }
+
+  state.peaks.forEach((peak, i) => {
+    const A = state.tableAmplitudes[i] ?? 0;
+    const isModified = state.userEdited[i] === true;
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><strong>${i}</strong></td>
+      <td>${peak.t.toFixed(3)}</td>
+      <td class="editable">
+        <input type="number"
+               class="amp-input ${isModified ? 'modified' : ''}"
+               data-idx="${i}"
+               min="0"
+               step="0.001"
+               value="${A.toFixed(4)}">
+      </td>
+      <td data-cell="redAbs">—</td>
+      <td data-cell="redPct">—</td>
+      <td data-cell="delta">—</td>
+      <td data-cell="zeta">—</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  document.querySelectorAll(".amp-input").forEach(input => {
+    input.addEventListener("input", onAmplitudeInput);
+    input.addEventListener("change", onAmplitudeInput);
+  });
+
+  recomputeDerivedCells();
+  recomputeFooter();
+}
+
+function onAmplitudeInput(e) {
+  const idx = parseInt(e.target.dataset.idx);
+  const val = parseFloat(e.target.value);
+  if (isNaN(val) || val <= 0) return;
+
+  state.tableAmplitudes[idx] = val;
+  state.userEdited[idx] = true;
+  state.userModified = true;
+  e.target.classList.add("modified");
+
+  // === Inferir ζ desde las celdas editadas y autorrellenar las demás ===
+  const derivedZeta = inferZetaAndBackfill();
+  if (derivedZeta !== null) {
+    const zClamped = Math.max(0.001, Math.min(0.10, derivedZeta));
+    state.zeta = zClamped;
+    state.zetaSource = "table";
+    syncZetaSlider();
+    regenerateCurveOnly();
+    updateZetaSourceLabel();
+  }
+
+  // Refrescar valores mostrados en celdas no enfocadas y columnas derivadas
+  refreshTableValues();
+  recomputeDerivedCells();
+  recomputeFooter();
+  updateTableStatus();
+}
+
+// Regresión lineal sobre ln(A) vs t de las celdas editadas, y back-fill de las
+// celdas no editadas con la curva resultante. Devuelve ζ inferido (o null).
+function inferZetaAndBackfill() {
+  const editedIdx = [];
+  for (let i = 0; i < state.peaks.length; i++) {
+    if (state.userEdited[i]) editedIdx.push(i);
+  }
+  if (editedIdx.length === 0) return null;
+
+  // Caso: una sola celda editada → no se puede inferir ζ. Mantener ζ vigente y
+  // ajustar las celdas no editadas tomando esa celda como anclaje.
+  if (editedIdx.length === 1) {
+    const a = editedIdx[0];
+    const A_anchor = state.tableAmplitudes[a];
+    const t_anchor = state.peaks[a].t;
+    const wn = state.params.omega;
+    const z = state.zeta;
+    for (let i = 0; i < state.peaks.length; i++) {
+      if (!state.userEdited[i]) {
+        const t = state.peaks[i].t;
+        state.tableAmplitudes[i] = A_anchor * Math.exp(-z * wn * (t - t_anchor));
+      }
+    }
+    return null;
+  }
+
+  // ≥ 2 celdas editadas → regresión lineal sobre ln(A) vs t
+  const xs = editedIdx.map(i => state.peaks[i].t);
+  const ys = editedIdx.map(i => Math.log(state.tableAmplitudes[i]));
+  const n = xs.length;
+  const sumX = xs.reduce((a,b)=>a+b, 0);
+  const sumY = ys.reduce((a,b)=>a+b, 0);
+  const sumXY = xs.reduce((a,xi,k)=>a + xi * ys[k], 0);
+  const sumXX = xs.reduce((a,xi)=>a + xi*xi, 0);
+  const denom = (n*sumXX - sumX*sumX);
+  if (Math.abs(denom) < 1e-12) return null;
+  const slope = (n*sumXY - sumX*sumY) / denom;
+  const intercept = (sumY - slope*sumX) / n;
+
+  // slope = −ζ · ωn  (modelo de envolvente exponencial)
+  const wn = state.params.omega;
+  const zetaFit = -slope / wn;
+
+  // Si los datos implican amplitud creciente (pendiente positiva) o ζ inválido,
+  // no rellenamos automáticamente.
+  if (!isFinite(zetaFit) || zetaFit <= 0) return null;
+
+  // Back-fill: para cada celda no editada, valor = exp(intercept + slope·t)
+  for (let i = 0; i < state.peaks.length; i++) {
+    if (!state.userEdited[i]) {
+      const t = state.peaks[i].t;
+      state.tableAmplitudes[i] = Math.exp(intercept + slope * t);
+    }
+  }
+  return zetaFit;
+}
+
+// Refresca el value de los inputs (excepto el que tiene foco) según state.tableAmplitudes
+function refreshTableValues() {
+  document.querySelectorAll(".amp-input").forEach(input => {
+    const idx = parseInt(input.dataset.idx);
+    if (document.activeElement !== input) {
+      const A = state.tableAmplitudes[idx];
+      if (A !== undefined && isFinite(A)) {
+        input.value = A.toFixed(4);
+      }
+    }
+    if (state.userEdited[idx]) {
+      input.classList.add("modified");
+    } else {
+      input.classList.remove("modified");
+    }
+  });
+}
+
+function recomputeDerivedCells() {
+  const rows = document.querySelectorAll("#cycles-tbody tr");
+  rows.forEach((tr, i) => {
+    const cRedAbs = tr.querySelector('[data-cell="redAbs"]');
+    const cRedPct = tr.querySelector('[data-cell="redPct"]');
+    const cDelta  = tr.querySelector('[data-cell="delta"]');
+    const cZeta   = tr.querySelector('[data-cell="zeta"]');
+    if (!cRedAbs) return;
+    if (i === 0) {
+      cRedAbs.textContent = "—";
+      cRedPct.textContent = "—";
+      cDelta.textContent  = "—";
+      cZeta.textContent   = "—";
+      return;
+    }
+    const Ap = state.tableAmplitudes[i-1];
+    const A  = state.tableAmplitudes[i];
+    if (Ap > 0 && A > 0) {
+      const dA = Ap - A;
+      const dPct = (dA / Ap) * 100;
+      const d = Math.log(Ap / A);
+      const z = d / Math.sqrt(4 * Math.PI * Math.PI + d * d);
+      cRedAbs.textContent = dA.toFixed(4);
+      cRedPct.textContent = dPct.toFixed(2);
+      cDelta.textContent  = d.toFixed(4);
+      cZeta.textContent   = (z * 100).toFixed(3);
+    } else {
+      cRedAbs.textContent = "—";
+      cRedPct.textContent = "—";
+      cDelta.textContent  = "—";
+      cZeta.textContent   = "—";
+    }
+  });
+}
+
+function computeAverageZetaFromTable() {
+  const deltas = [];
+  for (let i = 1; i < state.tableAmplitudes.length; i++) {
+    const Ap = state.tableAmplitudes[i-1];
+    const A  = state.tableAmplitudes[i];
+    if (Ap > 0 && A > 0 && Ap > A) {
+      deltas.push(Math.log(Ap / A));
+    }
+  }
+  if (deltas.length === 0) return null;
+  const avgD = deltas.reduce((a,b)=>a+b,0) / deltas.length;
+  return avgD / Math.sqrt(4 * Math.PI * Math.PI + avgD * avgD);
+}
+
+function recomputeFooter() {
+  const z = computeAverageZetaFromTable();
+  if (z !== null) {
+    const deltas = [];
+    for (let i = 1; i < state.tableAmplitudes.length; i++) {
+      const Ap = state.tableAmplitudes[i-1];
+      const A  = state.tableAmplitudes[i];
+      if (Ap > 0 && A > 0 && Ap > A) deltas.push(Math.log(Ap / A));
+    }
+    const avgD = deltas.reduce((a,b)=>a+b,0) / deltas.length;
+    document.getElementById("delta-avg").textContent = avgD.toFixed(4);
+    document.getElementById("zeta-avg").textContent  = (z * 100).toFixed(3) + " %";
+  } else {
+    document.getElementById("delta-avg").textContent = "—";
+    document.getElementById("zeta-avg").textContent  = "—";
+  }
+}
+
+function updateTableStatus() {
+  const status = document.getElementById("table-status");
+  if (state.userModified) {
+    status.textContent = "Valores experimentales (editados)";
+    status.className = "table-status";
+  } else {
+    status.textContent = "Valores teóricos";
+    status.className = "table-status theoretical";
+  }
+}
+
+// Regenera la curva (y los picos teóricos) sin tocar las amplitudes editadas
+function regenerateCurveOnly() {
+  state.history = [];
+  state.peaks = [];
+  state.theoreticalAmplitudes = [];
+  if (!state.params.stable) return;
+
+  const wn = state.params.omega;
+  const z  = state.zeta;
+  const wd = wn * Math.sqrt(1 - z * z);
+  const Td = 2 * Math.PI / wd;
+  const duration = state.tMax;
+  const dt = Math.max(0.001, Td / 80);
+
+  for (let t = 0; t <= duration; t += dt) {
+    const x = state.x0 * Math.exp(-z * wn * t) * Math.cos(wd * t);
+    state.history.push({ t, x });
+  }
+  const ampMin = Math.max(0.0001, state.x0 * 0.005);
+  for (let n = 0; n <= 30; n++) {
+    const tn = n * Td;
+    if (tn > duration) break;
+    const xn = state.x0 * Math.exp(-z * wn * tn);
+    if (xn < ampMin && n > 2) break;
+    state.peaks.push({ n, t: tn, x: xn });
+    state.theoreticalAmplitudes.push(xn * 100);
+    if (state.peaks.length >= 15) break;
+  }
+  updateChart();
+}
+
+// ===================================================================
+// ANIMACIÓN
+// ===================================================================
+function animate(timestamp) {
+  if (!state.lastFrameTime) state.lastFrameTime = timestamp;
+  if (!state.running) {
+    state.lastFrameTime = timestamp;
+    requestAnimationFrame(animate);
+    return;
+  }
+  const dt = Math.min((timestamp - state.lastFrameTime) / 1000, 0.04);
+  state.lastFrameTime = timestamp;
+  state.t += dt;
+
+  if (state.t > state.tMax) {
+    state.t = state.tMax;
+    state.running = false;
+  }
+
+  let currentX_cm = 0;
+  if (state.params.stable) {
+    const wn = state.params.omega;
+    const z  = state.zeta;
+    const wd = wn * Math.sqrt(1 - z * z);
+    const x = state.x0 * Math.exp(-z * wn * state.t) * Math.cos(wd * state.t);
+    currentX_cm = x * 100;
+    drawPendulum(currentX_cm);
+  } else {
+    const fall = Math.min(Math.PI/2, state.t * 1.2);
+    const xCm = state.params.L * 100 * Math.sin(fall);
+    currentX_cm = xCm;
+    drawPendulum(xCm);
+  }
+
+  // Punto dinámico en el gráfico
+  if (state.params.stable) {
+    updateCurrentPoint(state.t, currentX_cm);
+  }
+
+  requestAnimationFrame(animate);
+}
+
+// ===================================================================
+// EVENTOS
+// ===================================================================
+["L", "D", "x0"].forEach(id => {
+  document.getElementById(id).addEventListener("input", () => {
+    state.t = 0;
+    state.lastFrameTime = 0;
+    onGeometryChange();
+  });
+});
+
+document.getElementById("tmax").addEventListener("input", (e) => {
+  const v = parseFloat(e.target.value);
+  state.tMax = v;
+  document.getElementById("tmax-val").textContent = v.toFixed(1);
+  state.t = 0;
+  state.lastFrameTime = 0;
+  state.running = false;
+  refreshAfterParamChange(/*resetTable=*/true);
+});
+
+sel.addEventListener("change", (e) => {
+  if (e.target.value === "") return;
+  const g = grupos[parseInt(e.target.value)];
+  document.getElementById("L").value = g.L;
+  document.getElementById("D").value = g.D;
+  state.t = 0;
+  state.lastFrameTime = 0;
+  onGeometryChange();
+});
+
+// === Slider de ζ: ajuste manual ===
+document.getElementById("zeta").addEventListener("input", (e) => {
+  const z = parseFloat(e.target.value) / 100;
+  state.zeta = z;
+  state.zetaSource = "slider";
+  document.getElementById("zeta-val").textContent = (z * 100).toFixed(2);
+  // Resetear tabla a valores teóricos del nuevo ζ
+  state.t = 0;
+  refreshAfterParamChange(/*resetTable=*/true);
+});
+
+document.getElementById("btn-zeta-est").addEventListener("click", () => {
+  state.zeta = state.zetaEst;
+  state.zetaSource = "estimated";
+  syncZetaSlider();
+  state.t = 0;
+  refreshAfterParamChange(/*resetTable=*/true);
+});
+
+document.getElementById("btn-start").addEventListener("click", () => {
+  state.running = true;
+  state.t = 0;
+  state.lastFrameTime = 0;
+});
+document.getElementById("btn-pause").addEventListener("click", () => {
+  state.running = !state.running;
+  state.lastFrameTime = 0;
+});
+document.getElementById("btn-reset").addEventListener("click", () => {
+  state.running = false;
+  state.t = 0;
+  refreshAfterParamChange(/*resetTable=*/false);
+});
+document.getElementById("btn-reset-table").addEventListener("click", () => {
+  resetTableToTheoretical();
+});
+
+// ===================================================================
+// INIT
+// ===================================================================
+initChart();
+fitCanvas();
+onGeometryChange();
+fitCanvas(); // re-run after first draw to settle layout
+window.addEventListener("resize", () => {
+  fitCanvas();
+});
+requestAnimationFrame(animate);
+
+</script>
+</body>
+</html>
