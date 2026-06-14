@@ -424,8 +424,8 @@
           <span class="name">Altura libre L</span>
           <span class="value"><span id="L-val">21.0</span> cm</span>
         </div>
-        <input type="range" id="L" min="15" max="33" step="0.5" value="21">
-        <div class="range-meta"><span>15 cm</span><span>33 cm</span></div>
+        <input type="range" id="L" min="5" max="60" step="0.5" value="21">
+        <div class="range-meta"><span>5 cm</span><span>60 cm</span></div>
       </div>
 
       <div class="control-group">
@@ -435,6 +435,28 @@
         </div>
         <input type="range" id="D" min="2.5" max="6.0" step="0.1" value="3.5">
         <div class="range-meta"><span>2.5 cm</span><span>6.0 cm</span></div>
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">
+          <span class="name">Ø de la varilla (electrodo)</span>
+          <span class="value"><span id="dwire-val">2.50</span> mm</span>
+        </div>
+        <input type="range" id="dwire" min="1.5" max="6.0" step="0.05" value="2.5">
+        <div class="range-meta"><span>1.5 mm</span><span>6.0 mm</span></div>
+      </div>
+
+      <div class="control-group zeta-group">
+        <div class="control-label">
+          <span class="name">Peso final de la masa m</span>
+          <span class="value"><span id="mass-val">101</span> g</span>
+        </div>
+        <input type="range" id="mass" min="10" max="600" step="1" value="101">
+        <div class="range-meta"><span>10 g</span><span>600 g</span></div>
+        <button id="btn-mass-geo" class="btn-est">Usar masa por geometría (Ø, ρ)</button>
+        <div class="zeta-info">
+          <span class="src" id="mass-src">Origen: calculado por geometría (Ø, ρ)</span>
+        </div>
       </div>
 
       <div class="control-group">
@@ -460,8 +482,8 @@
           <span class="name">Amortiguamiento ζ</span>
           <span class="value"><span id="zeta-val">1.31</span> %</span>
         </div>
-        <input type="range" id="zeta" min="0.1" max="10.0" step="0.05" value="1.31">
-        <div class="range-meta"><span>0.1 %</span><span>10 %</span></div>
+        <input type="range" id="zeta" min="0" max="10.0" step="0.05" value="1.31">
+        <div class="range-meta"><span>0 %</span><span>10 %</span></div>
         <button id="btn-zeta-est" class="btn-est">Restablecer al ζ estimado</button>
         <div class="zeta-info">
           <span class="src" id="zeta-src">Origen: estimado por geometría</span>
@@ -587,7 +609,7 @@
 const E         = 2.0e11;
 const RHO_MORT  = 2100;
 const G         = 9.81;
-const D_WIRE    = 0.0025;
+const D_WIRE_DEFAULT = 0.0025;   // Ø núcleo electrodo 6011 por defecto (m) — ahora variable
 const H_CYL     = 0.05;
 const T_MAX_DEFAULT = 15.0;   // Tiempo de análisis inicial (s) — luego variable
 
@@ -629,13 +651,15 @@ grupos.forEach((g, idx) => {
 // ===================================================================
 // FÍSICA DEL SISTEMA
 // ===================================================================
-function computeParams(L_cm, D_cm) {
+function computeParams(L_cm, D_cm, Dwire_mm, mOverride_g) {
   const L = L_cm / 100;
   const D = D_cm / 100;
+  const Dwire = (Dwire_mm != null && isFinite(Dwire_mm)) ? Dwire_mm / 1000 : D_WIRE_DEFAULT;
   const V = Math.PI * Math.pow(D/2, 2) * H_CYL;
-  const m = V * RHO_MORT;
+  const m_geo = V * RHO_MORT;
+  const m = (mOverride_g != null && isFinite(mOverride_g)) ? (mOverride_g / 1000) : m_geo;
   const W = m * G;
-  const I = Math.PI * Math.pow(D_WIRE, 4) / 64;
+  const I = Math.PI * Math.pow(Dwire, 4) / 64;
   const k_b = 3 * E * I / Math.pow(L, 3);
   const k_g = m * G / L;
   const k_eff = k_b - k_g;
@@ -643,13 +667,14 @@ function computeParams(L_cm, D_cm) {
   const omega = stable ? Math.sqrt(k_eff / m) : 0;
   const f = omega / (2 * Math.PI);
   const T = stable ? 2 * Math.PI / omega : Infinity;
-  return { L, D, V, m, W, I, k_b, k_g, k_eff, stable, omega, f, T };
+  return { L, D, Dwire, V, m, m_geo, W, I, k_b, k_g, k_eff, stable, omega, f, T };
 }
 
 function estimateZeta(L_cm, D_cm) {
+  const clamp01 = x => Math.max(0, Math.min(1, x));
   const zMat = 0.010;
-  const zL   = 0.005 * (L_cm - 15) / (33 - 15);
-  const zD   = 0.005 * (D_cm - 2.5) / (6.0 - 2.5);
+  const zL   = 0.005 * clamp01((L_cm - 15) / (33 - 15));
+  const zD   = 0.005 * clamp01((D_cm - 2.5) / (6.0 - 2.5));
   return zMat + zL + zD;
 }
 
@@ -663,6 +688,10 @@ const state = {
   params: null,
   zeta: 0.013,            // amortiguamiento actual del simulador
   zetaEst: 0.013,          // valor estimado por geometría
+  dwire: 2.5,              // Ø de la varilla (mm)
+  massGeo: 0.101,          // masa geométrica del cilindro (kg)
+  massOverride: false,     // true = usar peso medido en lugar del geométrico
+  massVal: 101,            // peso de la masa cuando hay override (g)
   x0: 0.03,
   tMax: T_MAX_DEFAULT,
   history: [],
@@ -677,25 +706,75 @@ const state = {
 // ===================================================================
 // FLUJO PRINCIPAL — al cambiar L, Ø o x₀
 // ===================================================================
+function readControls() {
+  return {
+    Lcm:   parseFloat(document.getElementById("L").value),
+    Dcm:   parseFloat(document.getElementById("D").value),
+    x0cm:  parseFloat(document.getElementById("x0").value),
+    dwire: parseFloat(document.getElementById("dwire").value),
+  };
+}
+
+function buildParams() {
+  const c = readControls();
+  document.getElementById("L-val").textContent     = c.Lcm.toFixed(1);
+  document.getElementById("D-val").textContent     = c.Dcm.toFixed(1);
+  document.getElementById("x0-val").textContent    = c.x0cm.toFixed(1);
+  document.getElementById("dwire-val").textContent = c.dwire.toFixed(2);
+
+  state.dwire = c.dwire;
+  state.x0 = c.x0cm / 100;
+
+  // Masa geométrica del cilindro (cartulina Ø, altura 5 cm, mortero)
+  const Vgeo  = Math.PI * Math.pow((c.Dcm/100)/2, 2) * H_CYL;
+  const mGeoG = Vgeo * RHO_MORT * 1000;   // g
+  state.massGeo = mGeoG / 1000;
+  if (!state.massOverride) {
+    state.massVal = mGeoG;
+    syncMassSlider();
+  }
+
+  const mOver = state.massOverride ? state.massVal : null;
+  state.params = computeParams(c.Lcm, c.Dcm, c.dwire, mOver);
+  return c;
+}
+
+// L, Ø del cilindro, x₀ y grupo → recalcula y re-estima ζ por geometría
 function onGeometryChange() {
-  const Lcm = parseFloat(document.getElementById("L").value);
-  const Dcm = parseFloat(document.getElementById("D").value);
-  const x0cm = parseFloat(document.getElementById("x0").value);
-
-  document.getElementById("L-val").textContent  = Lcm.toFixed(1);
-  document.getElementById("D-val").textContent  = Dcm.toFixed(1);
-  document.getElementById("x0-val").textContent = x0cm.toFixed(1);
-
-  state.params = computeParams(Lcm, Dcm);
-  state.x0 = x0cm / 100;
-
-  // Estimar ζ y aplicarlo automáticamente
-  state.zetaEst = estimateZeta(Lcm, Dcm);
+  const c = buildParams();
+  state.zetaEst = estimateZeta(c.Lcm, c.Dcm);
   state.zeta = state.zetaEst;
   state.zetaSource = "estimated";
   syncZetaSlider();
-
   refreshAfterParamChange(/*resetTable=*/true);
+}
+
+// Ø de la varilla y peso de la masa → recalcula SIN forzar el ζ vigente
+function onDynamicsChange() {
+  const c = buildParams();
+  state.zetaEst = estimateZeta(c.Lcm, c.Dcm);
+  document.getElementById("zeta-est").textContent = (state.zetaEst * 100).toFixed(2);
+  refreshAfterParamChange(/*resetTable=*/true);
+}
+
+function syncMassSlider() {
+  const slider = document.getElementById("mass");
+  const clamped = Math.max(10, Math.min(600, state.massVal));
+  slider.value = clamped.toFixed(0);
+  document.getElementById("mass-val").textContent = state.massVal.toFixed(0);
+  updateMassSourceLabel();
+}
+
+function updateMassSourceLabel() {
+  const el = document.getElementById("mass-src");
+  if (!el) return;
+  if (state.massOverride) {
+    el.textContent = "Origen: peso medido (ajuste manual)";
+    el.style.color = "var(--primary)";
+  } else {
+    el.textContent = "Origen: calculado por geometría (Ø, ρ)";
+    el.style.color = "var(--dark-green)";
+  }
 }
 
 function refreshAfterParamChange(resetTable) {
@@ -737,7 +816,7 @@ function syncZetaSlider() {
   const slider = document.getElementById("zeta");
   const v = (state.zeta * 100).toFixed(2);
   // Limit to slider bounds
-  const clamped = Math.max(0.1, Math.min(10.0, parseFloat(v)));
+  const clamped = Math.max(0.0, Math.min(10.0, parseFloat(v)));
   slider.value = clamped;
   document.getElementById("zeta-val").textContent = clamped.toFixed(2);
 }
@@ -872,7 +951,7 @@ function drawPendulum(currentXcm) {
     ctx.lineTo(W/2 + xOff, baseY - rodLenPx * z);
   }
   ctx.strokeStyle = "#374151";
-  ctx.lineWidth = 3.5;
+  ctx.lineWidth = Math.max(2, (p.Dwire ? p.Dwire * 100 * pxPerCm * 1.6 : 3.5));
   ctx.lineCap = "round";
   ctx.stroke();
 
@@ -1381,9 +1460,36 @@ sel.addEventListener("change", (e) => {
   const g = grupos[parseInt(e.target.value)];
   document.getElementById("L").value = g.L;
   document.getElementById("D").value = g.D;
+  document.getElementById("dwire").value = 2.5;   // baseline 6011
+  state.massOverride = false;                      // volver a masa por geometría
   state.t = 0;
   state.lastFrameTime = 0;
   onGeometryChange();
+});
+
+// === Ø de la varilla ===
+document.getElementById("dwire").addEventListener("input", () => {
+  state.t = 0;
+  state.lastFrameTime = 0;
+  onDynamicsChange();
+});
+
+// === Peso final de la masa (calibración) ===
+document.getElementById("mass").addEventListener("input", (e) => {
+  state.massOverride = true;
+  state.massVal = parseFloat(e.target.value);
+  document.getElementById("mass-val").textContent = state.massVal.toFixed(0);
+  updateMassSourceLabel();
+  state.t = 0;
+  state.lastFrameTime = 0;
+  onDynamicsChange();
+});
+
+document.getElementById("btn-mass-geo").addEventListener("click", () => {
+  state.massOverride = false;
+  state.t = 0;
+  state.lastFrameTime = 0;
+  onDynamicsChange();
 });
 
 // === Slider de ζ: ajuste manual ===
